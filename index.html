@@ -12,8 +12,9 @@ h1{font-size:20px;margin:4px 0 2px}.sub{color:var(--mu);font-size:13px;margin-bo
 .sticky-bar{position:sticky;top:0;z-index:50;background:var(--bg);padding:6px 0 8px;margin-bottom:12px;border-bottom:1px solid var(--bd)}
 .cd-box{background:var(--card);border:1px solid var(--bd);border-radius:10px;padding:9px 12px}
 .cd-top{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-bottom:6px}
-.cd-tag{display:inline-flex;align-items:center;gap:5px;font-size:13px;font-weight:600;background:var(--bg);border:1px solid var(--bd);padding:3px 9px;border-radius:6px;cursor:pointer;user-select:none;transition:border-color .15s}
+.cd-tag{position:relative;display:inline-flex;align-items:center;gap:5px;font-size:13px;font-weight:600;background:var(--bg);border:1px solid var(--bd);padding:3px 9px;border-radius:6px;cursor:pointer;user-select:none;transition:border-color .15s}
 .cd-tag:hover{border-color:var(--ac);color:var(--ac)}
+.cd-date-input{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;margin:0;padding:0;border:none}
 .cd-pencil{font-size:11px;opacity:0.6;margin-left:2px}
 .cd-timer{display:flex;align-items:baseline;gap:2px;font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace;font-size:13px;font-weight:700;color:var(--ac);background:var(--acb);padding:3px 8px;border-radius:6px}
 .cd-lbl{font-size:10.5px;font-weight:500;opacity:0.8;margin-right:2px}
@@ -40,10 +41,10 @@ textarea{width:100%;margin-top:8px;min-height:60px}
 <div class="sticky-bar" id="stickyBar">
 <div class="cd-box">
 <div class="cd-top">
-<div class="cd-tag" id="cdTag" title="Click to change exam date">
+<label class="cd-tag" id="cdTag" title="Click to change exam date">
+<input type="date" id="cdDatePicker" class="cd-date-input">
 <span>⏳</span> <span>Exam: <strong id="cdDateText">14-12-25</strong></span> <span class="cd-pencil">✎</span>
-</div>
-<input type="date" id="cdDatePicker" style="display:none">
+</label>
 <div class="cd-timer" id="cdTimer">
 <span class="cd-num" id="cdDays">00</span><span class="cd-lbl">d</span>
 <span class="cd-dot">:</span>
@@ -105,20 +106,17 @@ if(b.dataset.s=='note')x.o=!x.o;else x.s=x.s==b.dataset.s?'':b.dataset.s;save();
 const y=scrollY;render();scrollTo(0,y)};
 $('list').onchange=e=>{if(e.target.tagName!='TEXTAREA')return;const id=e.target.closest('.c').dataset.id;S[id].nt=e.target.value;save()};
 function getExamTarget(){
-const saved=localStorage.getItem('pq_exam_date');let target,label='14-12-25';const now=new Date();
-if(saved){const p=saved.split('-');if(p.length===3){target=new Date(+p[0],+p[1]-1,+p[2],9,0,0);label=`${p[2]}-${p[1]}-${p[0].slice(-2)}`}else target=new Date(saved)}
-if(!target||isNaN(target.getTime())){let d=new Date(2025,11,14,9,0,0);if(d.getTime()<now.getTime()){let yr=now.getFullYear();let c=new Date(yr,11,14,9,0,0);if(c.getTime()<now.getTime())c=new Date(yr+1,11,14,9,0,0);target=c}else target=d;label='14-12-25'}
-return{target,label}}
+const saved=localStorage.getItem('pq_exam_date');let target,label='14-12-25',iso='2025-12-14';const now=new Date();
+if(saved){const p=saved.split('-');if(p.length===3){target=new Date(+p[0],+p[1]-1,+p[2],9,0,0);label=`${p[2]}-${p[1]}-${p[0].slice(-2)}`;iso=saved}else{target=new Date(saved);iso=saved}}
+if(!target||isNaN(target.getTime())){let d=new Date(2025,11,14,9,0,0);if(d.getTime()<now.getTime()){let yr=now.getFullYear();let c=new Date(yr,11,14,9,0,0);if(c.getTime()<now.getTime())c=new Date(yr+1,11,14,9,0,0);target=c;iso=`${c.getFullYear()}-12-14`}else{target=d;iso='2025-12-14'}label='14-12-25'}
+return{target,label,iso}}
 function updateCd(){
-const {target,label}=getExamTarget();const dtEl=$('cdDateText');if(dtEl)dtEl.textContent=label;
+const {target,label,iso}=getExamTarget();const dtEl=$('cdDateText');if(dtEl)dtEl.textContent=label;
+const p=$('cdDatePicker');if(p&&!p.value)p.value=iso;
 const now=new Date(),diff=target.getTime()-now.getTime(),tEl=$('cdTimer');if(!tEl)return;
 if(diff<=0){tEl.innerHTML=diff>-86400000?'<span style="color:var(--d);font-size:12px">Exam Today! 🎯</span>':'<span style="color:var(--mu);font-size:12px">Exam Finished</span>';return}
 const d=Math.floor(diff/86400000),h=Math.floor((diff%86400000)/3600000),m=Math.floor((diff%3600000)/60000),s=Math.floor((diff%60000)/1000);
 $('cdDays').textContent=d;$('cdHours').textContent=String(h).padStart(2,'0');$('cdMins').textContent=String(m).padStart(2,'0');$('cdSecs').textContent=String(s).padStart(2,'0')}
-function pickDate(){const p=$('cdDatePicker');try{if(p&&typeof p.showPicker==='function'){p.showPicker();return}}catch(e){}
-const cur=localStorage.getItem('pq_exam_date')||'2025-12-14';const ans=prompt('Set exam date (YYYY-MM-DD):',cur);
-if(ans&&!isNaN(new Date(ans).getTime())){localStorage.setItem('pq_exam_date',ans);updateCd()}}
-$('cdTag').onclick=pickDate;
 $('cdDatePicker').onchange=e=>{if(e.target.value){localStorage.setItem('pq_exam_date',e.target.value);updateCd()}};
 setInterval(updateCd,1000);updateCd();
 render();
